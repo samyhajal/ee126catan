@@ -36,14 +36,14 @@ class Catan:
 
     def get_vertex_number(self, x, y):
         return (self.height + 1) * y + x
-    
+
     def get_vertex_location(self, n):
         return (n % (self.height+1), n // (self.height+1))
-    
+
     def is_tile(self, x, y):
         """returns whether x,y is a valid tile"""
         return x >= 0 and x < self.width and y >= 0 and y < self.width
-    
+
     def build(self, x, y, building):
         """build either a city or a settlement"""
         if self.if_can_build(building, x, y):
@@ -59,8 +59,8 @@ class Catan:
                 raise CatanException("{0} is an unknown building. Please use 'city' or 'settlement'.".format(building))
         else:
             raise CatanException("Cannot build {0} here. Please check if_can_build before building".format(building))
-            
-    
+
+
     def if_can_build(self, building, x, y):
         """returns true if spot (x,y) is available, false otherwise"""
         if x< 0 or y<0 or x > self.width+1 or y > self.height + 1:
@@ -86,7 +86,7 @@ class Catan:
     def get_resources(self):
         """Returns array r where:
         r[i, :] = resources gained from throwing a (i+2)"""
-        r = np.zeros((11, 3)) 
+        r = np.zeros((11, 3))
         for vertex in self.settlements:
             x, y = self.get_vertex_location(vertex)
             for dx in [-1, 0]:
@@ -108,7 +108,7 @@ class Catan:
                         resource = self.resources[yy, xx]
                         r[die - 2, resource] += 2
         return r
-    
+
     def draw(self):
         fig = plt.figure()
         ax = fig.add_subplot(111, aspect='equal')
@@ -120,28 +120,35 @@ class Catan:
         for x in range(self.width):
             for y in range(self.height):
                 color = ["brown", "red", "green"][self.resources[y, x]]
-                ax.add_patch(patches.Rectangle((x, y),1,1, 
+                ax.add_patch(patches.Rectangle((x, y),1,1,
                                                facecolor=color))
                 ax.text(x+0.5, y+0.5, str(self.dice[y, x]), fontsize=15)
         for vertex in self.settlements:
             x, y = self.get_vertex_location(vertex)
-            ax.add_patch(patches.Rectangle((x-0.1, y-0.1),0.2,0.2, 
+            ax.add_patch(patches.Rectangle((x-0.1, y-0.1),0.2,0.2,
                                            facecolor="purple"))
             ax.text(x-0.05, y-0.09, "1", fontsize=15, color="white")
         for vertex in self.cities:
             x, y = self.get_vertex_location(vertex)
-            ax.add_patch(patches.Rectangle((x-0.1, y-0.1),0.2,0.2, 
-                                           facecolor="blue")) 
+            ax.add_patch(patches.Rectangle((x-0.1, y-0.1),0.2,0.2,
+                                           facecolor="blue"))
             ax.text(x-0.05, y-0.09, "2", fontsize=15, color="white")
 
-class Player:    
+class Player:
+    """
+    This class is the catan player class
+    functions:
+    if_can_buy(item) -- returns boolean if you can buy item. Item = {"card", "settlement", "city"}
+    buy(item) -- buys item. Item = {"card", "settlement", "city"}
+    play_round() -- plays a round of catan and returns the dice roll and increments your resources
+    """
     def __init__(self, action, board, resources, points = 0, turn_counter = 0):
         self.board = board
         self.action = action
         self.resources = resources
         self.points = points
         self.turn_counter = turn_counter
-        
+
     def if_can_buy(self, item):
         if item == "card":
             return np.all(self.resources >= costs[CARD,:])
@@ -151,7 +158,7 @@ class Player:
             return np.all(self.resources >= costs[CITY,:])
         else:
             raise CatanException("Unknown item: {0}".format(item))
-    
+
     def buy(self, item, x=-1,y=-1):
         if item == "card":
             self.points += 1
@@ -164,23 +171,23 @@ class Player:
             else:
                 self.points += 1
                 self.resources = np.subtract(self.resources,costs[CITY,:])
-            
-    
+
+
     def play_round(self):
         dice_roll = np.random.randint(1,7)+np.random.randint(1,7)
-        
+
         # collect resources
         collected_resources = self.board.get_resources()[dice_roll-2,:]
         self.resources = np.add(self.resources,collected_resources)
         self.resources = np.minimum(self.resources, MAX_RESOURCES) # LIMIT IS MAX # OF RESOURCES
-        
+
         # perform action
         self.action(self, self.resources, costs)
         assert np.max(self.resources) < LIMIT
-        
+
         # update the turn counter
         self.turn_counter += 1
-        
+
         return dice_roll
 
 def simulate_game(action, board, num_trials):
@@ -190,24 +197,24 @@ def simulate_game(action, board, num_trials):
         resources = np.array([MAX_RESOURCES, MAX_RESOURCES, MAX_RESOURCES])
         live_board = Catan(board.dice, board.resources, [], [])
         player = Player(action, live_board, resources)
-        
+
         while player.points < MAX_POINTS:
             if player.turn_counter > 10000:
                 raise CatanException("possible infinite loop (over 10K turns)")
                 break
             player.play_round()
         results.append(player.turn_counter)
-    
+
     return np.sum(results)/float(num_trials)
 
 def simulate_game_and_save(action, board):
     """Simulates 'num_trials' games with policy 'action' and returns average length of games"""
     results = list()
-    
+
     resources = np.array([MAX_RESOURCES, MAX_RESOURCES, MAX_RESOURCES])
     live_board = Catan(board.dice, board.resources, [], [])
     player = Player(action, live_board, resources)
-    
+
     settlements = []
     cities = []
     hands = []
@@ -224,7 +231,7 @@ def simulate_game_and_save(action, board):
         cities.append(live_board.cities[:])
         hands.append(player.resources[:])
         live_points.append(player.points)
-    
+
     return settlements, cities, hands, live_points, dice_rolls
 
 def get_random_dice_arrangement(width, height):
