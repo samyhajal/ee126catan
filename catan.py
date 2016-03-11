@@ -70,13 +70,16 @@ class Catan:
             #spot not available
             return False
             #raise CatanException("City already exists at that vertex")
+        if building == "city":
+            if self.get_vertex_number(x,y) in self.settlements:
+                return True
+            else:
+                return False
         for x1 in range(x-1,x+2):
             for y1 in range(y-1,y+2):
                 if x1+y1 < x+y-1 or x1+y1 > x+y+1 or y1-x1 < y-x-1 or y1-x1 > y-x+1:
                     pass
                 elif x1 < 0 or x1 > self.width or y1 < 0 or y1 > self.height:
-                    pass
-                elif building == "city" and x1 == x and y1 == y and self.get_vertex_number(x1,y1) in self.settlements:
                     pass
                 elif self.get_vertex_number(x1,y1) in self.settlements or self.get_vertex_number(x1,y1) in self.cities:
                     return False
